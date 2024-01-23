@@ -1,25 +1,128 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: 'Reproducible Research: Peer Assessment 1'
+author: "Ilya A"
+date: "2024-01-23"
+output: html_document
 ---
+## Introduction
 
+This assignment makes use of data from a personal activity monitoring device. This device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
 
-## Loading and preprocessing the data
+### Assignment:
 
+1. Code for reading in the dataset and/or processing the data
 
+2. Histogram of the total number of steps taken each day
 
-## What is mean total number of steps taken per day?
+3. Mean and median number of steps taken each day
 
+4. Time series plot of the average number of steps taken
 
+5. The 5-minute interval that, on average, contains the maximum number of steps
 
-## What is the average daily activity pattern?
+6. Code to describe and show a strategy for imputing missing data
 
+7. Histogram of the total number of steps taken each day after missing values are imputed
 
+8. Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
 
-## Imputing missing values
+9. All of the R code needed to reproduce the results (numbers, plots, etc.) in the report
 
+### Assignment answers
 
+#### 1. Code for reading in the dataset and/or processing the data
 
-## Are there differences in activity patterns between weekdays and weekends?
+``` {r}
+options(warn=-1)
+library(matrixStats)
+library(timeDate)
+library(tidyverse)
+library(ggpubr)
+
+activityData <- read.table("activity.csv", header = TRUE, sep = ",", quote = "\"'")
+summary(activityData)
+
+Date <-as.Date(unique(activityData$date)) # activity date array
+interval <- unique(activityData$interval) # activity interval array
+dailyActivity <- split(activityData,activityData$date) # daily activity
+```
+
+#### 2. Histogram of the total number of steps taken each day
+
+``` {r}
+stepArray <- c()
+for (i in 1:length(dailyActivity)){
+  stepArray <- cbind(stepArray,dailyActivity[[i]]$step)
+}
+totalStep <- colSums (stepArray, na.rm = TRUE, dims = 1)
+hist(totalStep, breaks=10, xlab="Number of steps", ylab="Days", main = "Activity Frequency")
+```
+
+#### 3. Mean and median number of steps taken each day. Code below calculates mean and median number of steps taken each day but results are not reported at this step
+
+``` {r}
+meanSteps <- colMeans(stepArray, na.rm = TRUE, dims = 1)
+medianSteps <-colMedians(stepArray, na.rm = TRUE, dims = 1)
+```
+
+#### 4. Time series plot of the average number of steps taken
+
+``` {r}
+plot(Date, meanSteps, xlab="Date", ylab="Avg # of Steps per 5 min", main = "Average Activity", 
+     pch =19, col = "red", cex = 1.5)
+```
+
+#### 5. The 5-minute interval that, on average, contains the maximum number of steps
+
+``` {r}
+intervalMean=rowMeans(stepArray, na.rm = TRUE, dims = 1)
+intervalMeanMax=which(intervalMean == max(intervalMean))
+sprintf("The 5-minute interval that, on average, contains the maximum number of steps: %d",intervalMeanMax)
+```
+
+#### 6. Code to describe and show a strategy for imputing missing data.
+
+Entry of 0 steps per 5 minute interval is considered valid and not imputed, only days with missing data are imputed, weekdays are imputed with average weekday activity, weekends are imputed with average weekend activity. Data is stored in *stepArray* array.
+
+``` {r}
+WeedayIndex <- unname(which(isWeekday(Date) ==TRUE))
+WeekendIndex <- unname(which(isWeekend(Date) ==TRUE))
+NAWeekdayIndex <- unname(which(colSums(is.na(stepArray)) >0 & isWeekday(Date)))
+NAWeekendIndex <- unname(which(colSums(is.na(stepArray)) >0 & isWeekend(Date)))
+
+WeekdayIndex <- WeedayIndex[-which (WeedayIndex %in% NAWeekdayIndex)]
+WeekendIndex <- WeekendIndex[-which (WeekendIndex %in% NAWeekendIndex)]
+
+avgWeekdayActivity=round(rowMeans(stepArray[,WeekdayIndex],na.rm = TRUE, dims = 1), digits = 0) # average weekday activity
+avgWeekendActivity=round(rowMeans(stepArray[,WeekendIndex],na.rm = TRUE, dims = 1), digits = 0) # average weekend activity
+
+stepArray[,NAWeekdayIndex] <- avgWeekdayActivity
+stepArray[,NAWeekendIndex] <- avgWeekendActivity
+```
+
+#### 7. Histogram of the total number of steps taken each day after missing values are imputed
+
+``` {r}
+totalStep <- colSums (stepArray, na.rm = TRUE, dims = 1)
+hist(totalStep, breaks=10, xlab="Number of steps", ylab="Days", main = "Activity Frequency (Data Imputed)")
+```
+
+#### 8. Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+
+``` {r}
+avgActivity <- data.frame(interval, avgWeekdayActivity, avgWeekendActivity)
+names(avgActivity) <- c("Interval", "Weekday", "Weekend")
+
+g1 <- ggplot (data = avgActivity, aes(x = Interval, y = Weekday)) +
+  geom_line(linewidth = 1.5, color = "red") +
+  xlab("Interval") + ylab ("Number of steps") + ggtitle("Weekday") +
+  ylim(0,300) +
+  theme_bw()
+
+g2 <- ggplot (data = avgActivity, aes(x = Interval, y = Weekend)) +
+  geom_line(linewidth = 1.5, color = "red") +
+  xlab("Interval") + ylab ("Number of steps") + ggtitle("Weekend") +
+  ylim(0,300)+
+  theme_bw()
+ggarrange(g1,g2,nrow = 2)
+```
