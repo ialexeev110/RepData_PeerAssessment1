@@ -34,10 +34,12 @@ This assignment makes use of data from a personal activity monitoring device. Th
 
 ``` {r}
 options(warn=-1)
+echo = FALSE
 library(matrixStats)
 library(timeDate)
 library(tidyverse)
 library(ggpubr)
+echo = TRUE
 
 activityData <- read.table("activity.csv", header = TRUE, sep = ",", quote = "\"'")
 summary(activityData)
@@ -58,11 +60,14 @@ totalStep <- colSums (stepArray, na.rm = TRUE, dims = 1)
 hist(totalStep, breaks=10, xlab="Number of steps", ylab="Days", main = "Activity Frequency")
 ```
 
-#### 3. Mean and median number of steps taken each day. Code below calculates mean and median number of steps taken each day but results are not reported at this step
+#### 3. Mean and median number of steps taken each day. Code below calculates mean and median number of steps taken each day
 
 ``` {r}
 meanSteps <- colMeans(stepArray, na.rm = TRUE, dims = 1)
 medianSteps <-colMedians(stepArray, na.rm = TRUE, dims = 1)
+sumTable <- data.frame(Date,round(meanSteps, digits = 0), round(medianSteps, digits = 0))
+names(sumTable) <- c("Date", "Interval Mean", "Interval Median")
+knitr::kable(sumTable, format = "markdown")
 ```
 
 #### 4. Time series plot of the average number of steps taken
@@ -77,7 +82,7 @@ plot(Date, meanSteps, xlab="Date", ylab="Avg # of Steps per 5 min", main = "Aver
 ``` {r}
 intervalMean=rowMeans(stepArray, na.rm = TRUE, dims = 1)
 intervalMeanMax=which(intervalMean == max(intervalMean))
-sprintf("The 5-minute interval that, on average, contains the maximum number of steps: %d",intervalMeanMax)
+sprintf("The 5-minute interval that, on average, contains the maximum number of steps: %d",interval[intervalMeanMax])
 ```
 
 #### 6. Code to describe and show a strategy for imputing missing data.
